@@ -131,7 +131,7 @@ def plot_traj(ax, stamps, traj, style, color, label):
     if len(x) > 0:
         ax.plot(x, y, style, color=color, label=label)
 
-def evaluate_ate(first_list, second_list, plot="", _args=""):
+def evaluate_ate(first_list, second_list, output_path, plot="", _args=""):
     # parse command line
     parser = argparse.ArgumentParser(
         description='This script computes the absolute trajectory error from the ground truth trajectory and the estimated trajectory.')
@@ -196,43 +196,40 @@ def evaluate_ate(first_list, second_list, plot="", _args=""):
         print("absolute_translational_error.min %f m" % numpy.min(trans_error))
         print("absolute_translational_error.max %f m" % numpy.max(trans_error))
 
-    if args.save_associations:
-        file = open(args.save_associations, "w")
-        file.write("\n".join(["%f %f %f %f %f %f %f %f" % (a, x1, y1, z1, b, x2, y2, z2) for (
-            a, b), (x1, y1, z1), (x2, y2, z2) in zip(matches, first_xyz.transpose().A, second_xyz_aligned.transpose().A)]))
-        file.close()
+    file = open(os.path.join(output_path, "associations.txt"), "w")
+    file.write("\n".join(["%f %f %f %f %f %f %f %f" % (a, x1, y1, z1, b, x2, y2, z2) for (
+        a, b), (x1, y1, z1), (x2, y2, z2) in zip(matches, first_xyz.transpose().A, second_xyz_aligned.transpose().A)]))
+    file.close()
 
-    if args.save:
-        file = open(args.save, "w")
-        file.write("\n".join(["%f " % stamp+" ".join(["%f" % d for d in line])
-                   for stamp, line in zip(second_stamps, second_xyz_full_aligned.transpose().A)]))
-        file.close()
+    file = open(os.path.join(output_path, "trajectory.txt"), "w")
+    file.write("\n".join(["%f " % stamp+" ".join(["%f" % d for d in line])
+                for stamp, line in zip(second_stamps, second_xyz_full_aligned.transpose().A)]))
+    file.close()
 
-    if args.plot:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pylab as pylab
-        import matplotlib.pyplot as plt
-        from matplotlib.patches import Ellipse
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ATE = numpy.sqrt(
-            numpy.dot(trans_error, trans_error) / len(trans_error))
-        png_name = os.path.basename(args.plot)
-        ax.set_title(f'len:{len(trans_error)} ATE RMSE:{ATE} {png_name[:-3]}')
-        plot_traj(ax, first_stamps, first_xyz_full.transpose().A,
-                  '-', "black", "ground truth")
-        plot_traj(ax, second_stamps, second_xyz_full_aligned.transpose(
-        ).A, '-', "blue", "estimated")
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pylab as pylab
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Ellipse
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ATE = numpy.sqrt(
+        numpy.dot(trans_error, trans_error) / len(trans_error))
+    png_name = os.path.basename(args.plot)
+    ax.set_title(f'len:{len(trans_error)} ATE RMSE:{ATE} {png_name[:-3]}')
+    plot_traj(ax, first_stamps, first_xyz_full.transpose().A,
+                '-', "black", "ground truth")
+    plot_traj(ax, second_stamps, second_xyz_full_aligned.transpose(
+    ).A, '-', "blue", "estimated")
 
-        label = "difference"
-        for (a, b), (x1, y1, z1), (x2, y2, z2) in zip(matches, first_xyz.transpose().A, second_xyz_aligned.transpose().A):
-            # ax.plot([x1,x2],[y1,y2],'-',color="red",label=label)
-            label = ""
-        ax.legend()
-        ax.set_xlabel('x [m]')
-        ax.set_ylabel('y [m]')
-        plt.savefig(args.plot, dpi=90)
+    label = "difference"
+    for (a, b), (x1, y1, z1), (x2, y2, z2) in zip(matches, first_xyz.transpose().A, second_xyz_aligned.transpose().A):
+        # ax.plot([x1,x2],[y1,y2],'-',color="red",label=label)
+        label = ""
+    ax.legend()
+    ax.set_xlabel('x [m]')
+    ax.set_ylabel('y [m]')
+    plt.savefig(args.plot, dpi=90)
 
     return {
         "compared_pose_pairs": (len(trans_error)),
@@ -244,7 +241,7 @@ def evaluate_ate(first_list, second_list, plot="", _args=""):
         "absolute_translational_error.max": numpy.max(trans_error),
     }
 
-def evaluate(poses_gt, poses_est, plot):
+def evaluate(poses_gt, poses_est, output_path, plot):
 
     poses_gt = poses_gt.cpu().numpy()
     poses_est = poses_est.cpu().numpy()
@@ -253,7 +250,7 @@ def evaluate(poses_gt, poses_est, plot):
     poses_gt = dict([(i, poses_gt[i]) for i in range(N)])
     poses_est = dict([(i, poses_est[i]) for i in range(N)])
 
-    results = evaluate_ate(poses_gt, poses_est, plot)
+    results = evaluate_ate(poses_gt, poses_est, output_path, plot)
     return results
 
 def convert_poses(c2w_list, N, scale, gt=True):
@@ -282,7 +279,7 @@ def pose_evaluation(poses_gt, poses_est, scale, path_to_save, i, img='pose', nam
     poses_est = poses_est[mask]
     plt_path = os.path.join(path_to_save, '{}_{}.png'.format(img, i))
 
-    results = evaluate(poses_gt, poses_est, plot=plt_path)
+    results = evaluate(poses_gt, poses_est, path_to_save, plot=plt_path)
     results['Name'] = i
     print(results, file=open(os.path.join(path_to_save, name), "a"))
     return results
