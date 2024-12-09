@@ -5,7 +5,7 @@ dates=("2023-08-18" "2023-09-15" "2024-01-13" "2024-04-11" "2024-05-29_1" "2024-
 for date in "${dates[@]}"; do
     echo "Processing date: $date"
 
-    python coslam_stihl.py --config configs/Stihl/d435i.yaml --input_folder /workspace/mounted_directory/media/fabian/data_recording_r/kwald/drosselweg/flaeche1/$date/tum/d435i --output output/short/$date
+    python coslam_rover.py --config configs/ROVER/d435i.yaml --input_folder /workspace/mounted_directory/media/fabian/data_recording_r/kwald/drosselweg/flaeche1/$date/tum/d435i --output output/short/$date
 
 done
 
